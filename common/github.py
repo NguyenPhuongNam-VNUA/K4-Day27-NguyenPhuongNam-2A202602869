@@ -42,13 +42,18 @@ def _token() -> str:
     return tok
 
 
-def _headers(accept: str = "application/vnd.github+json") -> dict[str, str]:
-    return {
-        "Authorization": f"Bearer {_token()}",
+def _headers(accept: str = "application/vnd.github+json", require_auth: bool = False) -> dict[str, str]:
+    headers = {
         "Accept": accept,
         "X-GitHub-Api-Version": "2022-11-28",
         "User-Agent": "Day27-HITL-Lab",
     }
+    tok = os.environ.get("GITHUB_TOKEN")
+    if tok:
+        headers["Authorization"] = f"Bearer {tok}"
+    elif require_auth:
+        headers["Authorization"] = f"Bearer {_token()}"
+    return headers
 
 
 def parse_pr_url(pr_url: str) -> tuple[str, str, int]:
@@ -105,5 +110,5 @@ def post_review_comment(pr_url: str, body: str) -> None:
     owner, repo, number = parse_pr_url(pr_url)
     url = f"{API}/repos/{owner}/{repo}/issues/{number}/comments"
     with httpx.Client(timeout=30.0) as client:
-        resp = client.post(url, headers=_headers(), json={"body": body})
+        resp = client.post(url, headers=_headers(require_auth=True), json={"body": body})
         resp.raise_for_status()
